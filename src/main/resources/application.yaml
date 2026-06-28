@@ -1,6 +1,11 @@
 spring:
   application:
     name: backend
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB       # matches CloudinaryService MAX_FILE_SIZE
+      max-request-size: 55MB    # slightly larger than max-file-size
 
   datasource:
     url: ${DB_URL}
