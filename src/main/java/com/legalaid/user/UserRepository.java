@@ -2,6 +2,7 @@ package com.legalaid.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -22,4 +23,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     // Check if email already taken (for validation)
     Boolean existsByEmail(String email);
+
+    // Get user name
+    @Query("""
+    SELECT u.name FROM User u
+    WHERE u.id = :userId
+    AND u.deletedAt IS NULL
+    """)
+    Optional<String> getUserNameById(@Param("userId") UUID userId);
 }

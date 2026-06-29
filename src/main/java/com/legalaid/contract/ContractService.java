@@ -1,6 +1,10 @@
 package com.legalaid.contract;
 
 import com.legalaid.contract.dto.*;
+import com.legalaid.lawyer.LawyerProfile;
+import com.legalaid.lawyer.repositories.LawyerRepository;
+import com.legalaid.notification.NotificationService;
+import com.legalaid.payment.PaymentService;
 import com.legalaid.service.LegalService;
 import com.legalaid.service.repositories.ServiceRepository;
 import com.legalaid.user.User;
@@ -25,6 +29,9 @@ public class ContractService {
     private final ContractMilestoneRepository milestoneRepository;
     private final ServiceRepository           serviceRepository;
     private final UserRepository              userRepository;
+    private final NotificationService         notificationService;
+    private final LawyerRepository            lawyerRepository;
+    private final PaymentService               paymentService;
 
     // ── GET /api/contracts — list own contracts ───────────────
     public List<ContractSummaryResponse> getMyContracts(UUID userId) {
@@ -101,6 +108,14 @@ public class ContractService {
                 .build();
 
         contract = contractRepository.save(contract);
+
+        // Notify lawyer of new hire request
+        UUID lawyerUserId = lawyerRepository.getLawyerUserIdByLawyerProfileId(service.getLawyerId())
+                .orElseThrow(() -> new RuntimeException("Lawyer user not found"));
+        String clientName = userRepository.getUserNameById(clientId)
+                        .orElseThrow(() -> new RuntimeException("Client not found"));
+        notificationService.notifyContractRequest(lawyerUserId, contract.getId(), clientName);
+
         return toDetailResponse(contract);
     }
 
@@ -120,6 +135,13 @@ public class ContractService {
 
         contract.setStatus(ContractStatus.PENDING_PAYMENT);
         contractRepository.save(contract);
+
+        // Notify client lawyer accepted
+        String lawyerName = userRepository.getUserNameById(lawyerUserId)
+                .orElseThrow(() -> new RuntimeException("Lawyer user not found"));
+
+        notificationService.notifyContractAccepted(contract.getClientId(), contract.getId(), lawyerName);
+
         return toDetailResponse(contract);
     }
 
@@ -139,6 +161,12 @@ public class ContractService {
 
         contract.setStatus(ContractStatus.CANCELLED);
         contractRepository.save(contract);
+
+        // Notification
+        String lawyerName = userRepository.getUserNameById(lawyerUserId)
+                        .orElseThrow(() -> new RuntimeException("Lawyer user not found"));
+        notificationService.notifyContractDeclined(contract.getClientId(), contract.getId(), lawyerName);
+
         return toDetailResponse(contract);
     }
 
@@ -159,6 +187,26 @@ public class ContractService {
         contract.setStatus(ContractStatus.COMPLETED);
         contract.setEscrowStatus(EscrowStatus.RELEASED);
         contractRepository.save(contract);
+
+        // Update Payment record in DB
+        paymentService.releasePayment(contract.getId());
+
+        // Notification
+
+        String clientName = userRepository.getUserNameById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client user not found"));
+
+        notificationService.notifyContractCompleted(
+                contract.getLawyerId(),
+                contract.getId(),
+                clientName
+        );
+
+        notificationService.notifyPaymentReleased(
+                contract.getLawyerId(),
+                contract.getId(),
+                contract.getAmount().subtract(contract.getPlatformFee()).toString()
+        );
 
         // Payment release is handled in payment package when built
         // This sets the escrow flag — the actual payout logic lives there
@@ -197,14 +245,36 @@ public class ContractService {
             throw new RuntimeException("You are not a participant in this contract");
         }
 
+        boolean hadEscrow = contract.getEscrowStatus() == EscrowStatus.HELD;
+
         contract.setStatus(ContractStatus.CANCELLED);
 
         // If payment was held, mark for refund
-        if (contract.getEscrowStatus() == EscrowStatus.HELD) {
+        if (hadEscrow) {
             contract.setEscrowStatus(EscrowStatus.REFUNDED);
         }
 
+        if (hadEscrow) {
+            paymentService.refundPayment(contract.getId());
+        }
+
         contractRepository.save(contract);
+
+        // Notify the OTHER party (not the one who cancelled)
+        UUID otherPartyId = isClient ? contract.getLawyerId() : contract.getClientId();
+        String cancellerName = userRepository.getUserNameById(requesterId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        notificationService.notifyContractCancelled(otherPartyId, contract.getId(), cancellerName);
+
+        // If payment was held, also notify client of refund
+        if(hadEscrow) {
+            notificationService.notifyPaymentRefunded(
+                    contract.getClientId(),
+                    contract.getId(),
+                    contract.getAmount().toString()
+            );
+        }
+
         return toDetailResponse(contract);
     }
 

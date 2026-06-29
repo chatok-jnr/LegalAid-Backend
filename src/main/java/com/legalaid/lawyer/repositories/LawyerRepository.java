@@ -36,4 +36,11 @@ public interface LawyerRepository extends JpaRepository<LawyerProfile, UUID> {
             @Param("minRating") Double minRating,
             Pageable pageable
     );
+
+    @Query("""
+    SELECT l.userId FROM LawyerProfile l
+    WHERE l.id = :lawyerProfileId
+    AND l.verificationStatus = 'APPROVED'
+    """)
+    Optional<UUID> getLawyerUserIdByLawyerProfileId(@Param("lawyerProfileId") UUID lawyerProfileId);
 }

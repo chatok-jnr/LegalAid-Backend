@@ -11,6 +11,8 @@ import com.legalaid.case_.repositories.CaseAccessRepository;
 import com.legalaid.case_.repositories.CaseMilestoneRepository;
 import com.legalaid.case_.repositories.CaseRepository;
 import com.legalaid.case_.repositories.CaseTagRepository;
+import com.legalaid.notification.NotificationService;
+import com.legalaid.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,8 @@ public class CaseService {
     private final CaseAccessRepository accessRepository;
     private final CaseMilestoneRepository milestoneRepository;
     private final CaseTagRepository tagRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     // ── GET /api/cases — list own cases ──────────────────────
     // Returns all cases the user can see:
@@ -159,6 +163,15 @@ public class CaseService {
                 .build();
 
         accessRepository.save(access);
+
+        String inviter = userRepository.getUserNameById(requesterId)
+                        .orElse("Someone");
+        notificationService.notifyCaseInvite(
+                request.getUserId(),
+                caseId,
+                inviter,
+                legalCase.getTitle()
+        );
     }
 
     // ── DELETE /api/cases/:id/access/:userId — remove user ───

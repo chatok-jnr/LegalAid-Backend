@@ -4,6 +4,7 @@ import com.legalaid.contract.Contract;
 import com.legalaid.contract.ContractRepository;
 import com.legalaid.contract.ContractStatus;
 import com.legalaid.contract.EscrowStatus;
+import com.legalaid.notification.NotificationService;
 import com.legalaid.payment.dto.*;
 import com.legalaid.service.repositories.ServiceRepository;
 import com.legalaid.user.User;
@@ -26,6 +27,8 @@ public class PaymentService {
     private final ContractRepository    contractRepository;
     private final ServiceRepository     serviceRepository;
     private final UserRepository        userRepository;
+    private final PaymentService        paymentService;
+    private final NotificationService notificationService;
 
     // ── POST /api/payments — client records bKash payment ────
     // Flow:
@@ -169,6 +172,9 @@ public class PaymentService {
         contract.setEscrowStatus(EscrowStatus.HELD);
         contractRepository.save(contract);
 
+        // Notification
+        notificationService.notifyPaymentReceived(contract.getLawyerId(), contract.getId(), payment.getAmount().toString());
+
         return toPaymentResponse(payment);
     }
 
@@ -189,6 +195,9 @@ public class PaymentService {
         payment.setVerifiedBy(adminId);
         payment.setVerifiedAt(Instant.now());
         paymentRepository.save(payment);
+
+        // Notification
+        notificationService.notifyPaymentRejected(payment.getClientId(), payment.getContractId());
 
         return toPaymentResponse(payment);
     }
