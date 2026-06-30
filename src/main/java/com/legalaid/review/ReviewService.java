@@ -95,11 +95,12 @@ public class ReviewService {
         }
 
         // Notify lawyer — @Async so it never blocks the response
-        User client = userRepository.findActiveById(clientId).orElse(null);
+        String clientName = userRepository.getUserNameById(clientId)
+                        .orElse("A Client");
         notificationService.notifyReviewReceived(
                 contract.getLawyerId(),
                 review.getId(),
-                client != null ? client.getName() : "A client",
+                clientName,
                 request.getRating()
         );
 
@@ -155,11 +156,12 @@ public class ReviewService {
         review = reviewRepository.save(review);
 
         // Notify client of reply — @Async
-        User lawyer = userRepository.findActiveById(lawyerUserId).orElse(null);
+        String lawyerName = userRepository.getUserNameById(lawyerUserId)
+                .orElse("The lawyer");
         notificationService.notifyReviewReplied(
                 review.getClientId(),
                 review.getId(),
-                lawyer != null ? lawyer.getName() : "The lawyer"
+                lawyerName
         );
 
         return toResponse(review, lawyerUserId);
