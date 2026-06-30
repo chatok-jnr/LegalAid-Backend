@@ -43,4 +43,6 @@ public interface LawyerRepository extends JpaRepository<LawyerProfile, UUID> {
     AND l.verificationStatus = 'APPROVED'
     """)
     Optional<UUID> getLawyerUserIdByLawyerProfileId(@Param("lawyerProfileId") UUID lawyerProfileId);
+
+    long countByVerificationStatus(VerificationStatus status);
 }

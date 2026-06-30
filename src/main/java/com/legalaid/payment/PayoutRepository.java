@@ -26,4 +26,10 @@ public interface PayoutRepository extends JpaRepository<Payout, UUID> {
         AND p.status = 'COMPLETED'
         """)
     BigDecimal sumCompletedPayoutsForLawyer(@Param("lawyerId") UUID lawyerId);
+
+    List<Payout> findAllByStatusOrderByRequestedAtAsc(PayoutStatus status);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payout p WHERE p.status = 'REQUESTED'")
+    BigDecimal sumRequestedPayouts();
+
 }

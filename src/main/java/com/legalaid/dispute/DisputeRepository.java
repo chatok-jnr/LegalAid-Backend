@@ -39,4 +39,7 @@ public interface DisputeRepository extends JpaRepository<Dispute, UUID> {
     // Admin — filter by status
     Page<Dispute> findAllByStatusAndDeletedAtIsNull(
             DisputeStatus status, Pageable pageable);
+
+    long countByStatusInAndDeletedAtIsNull(List<DisputeStatus> statuses);
+    long countByStatusAndDeletedAtIsNull(DisputeStatus status);
 }

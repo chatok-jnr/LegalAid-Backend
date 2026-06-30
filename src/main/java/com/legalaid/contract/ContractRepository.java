@@ -44,4 +44,7 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
     // Prevents duplicate active contracts for the same service
     boolean existsByClientIdAndServiceIdAndStatusIn(
             UUID clientId, UUID serviceId, List<ContractStatus> statuses);
+
+    long countByDeletedAtIsNull();
+    long countByStatusAndDeletedAtIsNull(ContractStatus status);
 }

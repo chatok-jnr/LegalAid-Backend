@@ -49,4 +49,7 @@ public interface ServiceRepository extends JpaRepository<LegalService, UUID> {
             @Param("maxPrice")     BigDecimal maxPrice,
             @Param("deliveryDays") Integer deliveryDays,
             Pageable pageable);
+
+    long countByDeletedAtIsNull();
+    long countByIsActiveTrueAndDeletedAtIsNull();
 }

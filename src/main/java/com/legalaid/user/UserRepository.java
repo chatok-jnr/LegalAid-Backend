@@ -31,4 +31,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     AND u.deletedAt IS NULL
     """)
     Optional<String> getUserNameById(@Param("userId") UUID userId);
+
+    long countByRole(UserRole role);
 }

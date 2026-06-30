@@ -45,4 +45,10 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
         AND p.status = 'HELD'
         """)
     BigDecimal sumHeldEarningsForLawyer(@Param("lawyerUserId") UUID lawyerUserId);
+
+    long countByStatus(PaymentStatus status);
+    List<Payment> findAllByStatusOrderByCreatedAtAsc(PaymentStatus status);
+
+    @Query("SELECT COALESCE(SUM(p.platformFee), 0) FROM Payment p WHERE p.status = 'RELEASED'")
+    BigDecimal sumPlatformFees();
 }
