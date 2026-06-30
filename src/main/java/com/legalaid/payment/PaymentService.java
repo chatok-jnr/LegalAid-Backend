@@ -27,7 +27,6 @@ public class PaymentService {
     private final ContractRepository    contractRepository;
     private final ServiceRepository     serviceRepository;
     private final UserRepository        userRepository;
-    private final PaymentService        paymentService;
     private final NotificationService notificationService;
 
     // ── POST /api/payments — client records bKash payment ────
