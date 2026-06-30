@@ -3,6 +3,7 @@ package com.legalaid.message;
 import com.legalaid.contract.Contract;
 import com.legalaid.contract.ContractRepository;
 import com.legalaid.message.dto.*;
+import com.legalaid.notification.NotificationService;
 import com.legalaid.user.User;
 import com.legalaid.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class MessageService {
     private final MessageRepository  messageRepository;
     private final ContractRepository contractRepository;
     private final UserRepository     userRepository;
+    private final NotificationService notificationService;
 
     // ── GET /api/contracts/:id/messages ──────────────────────
     // Returns paginated message thread for a contract.
@@ -95,6 +97,16 @@ public class MessageService {
                 .build();
 
         message = messageRepository.save(message);
+
+        // Notify the OTHER party (not the sender)
+        UUID recipientId = senderId.equals(contract.getClientId()) ? contract.getLawyerId() : contract.getClientId();
+
+        String senderName = userRepository.getUserNameById(senderId)
+                .orElse("Someone");
+
+        notificationService.notifyMessageReceived(recipientId, contractId, senderName);
+
+
         return toMessageResponse(message);
     }
 
